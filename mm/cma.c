@@ -485,6 +485,12 @@ struct page *cma_alloc(struct cma *cma, unsigned long count,
 	bool lock = (cma == cont_pte_cma);
 	bool spinlock = is_cont_pte_cma(cma);
 #endif
+	bool bypass = false;
+
+	trace_android_vh_cma_alloc_bypass(cma, count, align, no_warn,
+				&page, &bypass);
+	if (bypass)
+		return page;
 
 	if (!cma || !cma->count || !cma->bitmap)
 		goto out;

@@ -19,6 +19,8 @@
 #include <linux/rbtree.h>
 #include <linux/stacktrace.h>
 
+#include <trace/hooks/mm.h>
+
 #define DM_MSG_PREFIX "bufio"
 
 /*
@@ -1705,6 +1707,13 @@ static bool dm_bufio_shrink_scan_skip(void)
 static unsigned long dm_bufio_shrink_scan(struct shrinker *shrink, struct shrink_control *sc)
 {
 	struct dm_bufio_client *c;
+	bool bypass = false;
+
+	trace_android_vh_dm_bufio_shrink_scan_bypass(
+			dm_bufio_current_allocated,
+			&bypass);
+	if (bypass)
+		return 0;
 
 #ifdef CONFIG_BLOCKIO_UX_OPT
 	if (dm_bufio_shrink_scan_skip())
@@ -2036,6 +2045,14 @@ static void cleanup_old_buffers(void)
 {
 	unsigned long max_age_hz = get_max_age_hz();
 	struct dm_bufio_client *c;
+	bool bypass = false;
+
+	trace_android_vh_cleanup_old_buffers_bypass(
+				dm_bufio_current_allocated,
+				&max_age_hz,
+				&bypass);
+	if (bypass)
+		return;
 
 	mutex_lock(&dm_bufio_clients_lock);
 
