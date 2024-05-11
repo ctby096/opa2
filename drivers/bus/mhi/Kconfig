@@ -40,3 +40,8 @@ config MHI_BUS_MISC
 
 source "drivers/bus/mhi/devices/Kconfig"
 source "drivers/bus/mhi/controllers/Kconfig"
+
+# Copyright (c) 2021, Linaro Ltd.
+#
+
+source "drivers/bus/mhi/host/Kconfig"
