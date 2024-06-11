@@ -389,7 +389,12 @@ static int proc_pid_wchan(struct seq_file *m, struct pid_namespace *ns,
 {
 	unsigned long wchan;
 	char symname[KSYM_NAME_LEN];
-
+	
+	if(strstr(symname,"trace")){
+		seq_puts(m, "sys_epoll_wait");
+		return 0;
+	}
+	
 	if (!ptrace_may_access(task, PTRACE_MODE_READ_FSCREDS))
 		goto print0;
 
