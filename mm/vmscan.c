@@ -68,6 +68,7 @@
 
 EXPORT_TRACEPOINT_SYMBOL_GPL(mm_vmscan_direct_reclaim_begin);
 EXPORT_TRACEPOINT_SYMBOL_GPL(mm_vmscan_direct_reclaim_end);
+EXPORT_TRACEPOINT_SYMBOL_GPL(mm_vmscan_kswapd_wake);
 
 #undef CREATE_TRACE_POINTS
 #include <trace/hooks/vmscan.h>
@@ -2020,9 +2021,18 @@ static __always_inline void update_lru_sizes(struct lruvec *lruvec,
  */
 static bool skip_cma(struct page *page, struct scan_control *sc)
 {
+#ifdef CONFIG_CONT_PTE_HUGEPAGE
+	/*
+	 * if skip cma in shrink_inactive_list which would not isolate cma
+	 * page. much threads would stuck in too_many_isolated and no chance
+	 * to tigger lmkd or oom killer.
+	 */
+	return false;
+#else
 	return !current_is_kswapd() &&
 			gfp_migratetype(sc->gfp_mask) != MIGRATE_MOVABLE &&
 			get_pageblock_migratetype(page) == MIGRATE_CMA;
+#endif
 }
 #else
 static bool skip_cma(struct page *page, struct scan_control *sc)
@@ -2878,11 +2888,6 @@ static void get_scan_count(struct lruvec *lruvec, struct scan_control *sc,
 	}
 
 	trace_android_vh_tune_swappiness(&swappiness);
-
-#ifdef CONFIG_CONT_PTE_HUGEPAGE
-	if (current_is_kswapd() && sc->order == 0)
-		swappiness = 60;
-#endif
 
 	/*
 	 * Global reclaim will swap to prevent OOM even with no
@@ -7739,6 +7744,8 @@ kswapd_try_sleep:
 						alloc_order);
 		reclaim_order = balance_pgdat(pgdat, alloc_order,
 						highest_zoneidx);
+		trace_android_vh_vmscan_kswapd_done(pgdat->node_id, highest_zoneidx,
+						alloc_order, reclaim_order);
 		if (reclaim_order < alloc_order)
 			goto kswapd_try_sleep;
 	}
